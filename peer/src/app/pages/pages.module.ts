@@ -5,6 +5,8 @@ import { PagesRoutingModule } from './pages-routing.module';
 import { PagesComponent } from './pages.component';
 import { BuchenComponent } from './buchen/buchen.component';
 import { AccountsComponent } from './accounts/accounts.component';
+import { UserComponent } from './user/user.component';
+import { BetreiberComponent } from './betreiber/betreiber.component';
 
 
 
@@ -18,6 +20,8 @@ import { AccountsComponent } from './accounts/accounts.component';
     PagesComponent,
     BuchenComponent,
     AccountsComponent,
+    UserComponent,
+    BetreiberComponent,
   ]
 })
 export class PagesModule { }
