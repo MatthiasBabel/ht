@@ -13,8 +13,45 @@ contract Home {
     }
 
     //setter
-    function useCapaInNextInterval(uint _x, uint _y, uint _value) public returns(uint capaLeft) {
+    function useCapaInNextIntervalFromXY(uint _x, uint _y, uint _value) public returns(uint capaLeft) {
         return storageGrid[_x][_y].useCapaInNextInterval(_value);
+    }
+
+    function useCapaInNextIntervalForXY(uint _x, uint _y, uint _value) public {
+        uint index = 0;
+        uint shortest = 0;
+        uint valueLeft = _value;
+        uint j = 0;
+        while(j < storages.length && valueLeft > 0){
+        //Suchen der kürzesten Distanz
+            for(uint i = 0; i < storages.length; i++){
+                uint x = 0;
+                uint y = 0;
+                uint len = 0;
+                (x, y) = storages[i].getXY();
+                //Abs
+                if(_x > x)
+                    len = _x - x;
+                else
+                    len = x - _x;
+                if(_y > y)
+                    len += _y - y;
+                else
+                    len += y - _y;
+                if(len < shortest){
+                    shortest = len;
+                    index = i;
+                }
+            }
+            uint space = storages[index].getUnusedCapaInNextInterval();
+            if(space >= valueLeft)
+                storages[index].useCapaInNextInterval(valueLeft);
+            else {
+                storages[index].useCapaInNextInterval(space);
+                valueLeft -= space;
+            }
+            j++;
+        }
     }
 
     //New
@@ -127,7 +164,8 @@ contract Storage {
     }
 
     function useCapaInNextInterval(uint _value) public returns(uint _free){
-        require(usedCapaInInterval[home.getNextInterval()] + _value < capa, "No capacity left");
+        require(msg.sender == address(home), "No permission");
+        require(usedCapaInInterval[home.getNextInterval()] + _value <= capa, "No capacity left");
         usedCapaInInterval[home.getNextInterval()] += _value;
         return usedCapaInInterval[home.getNextInterval()];
     }
