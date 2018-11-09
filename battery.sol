@@ -1,7 +1,7 @@
 pragma solidity ^0.4.24;
 
 contract Home {
-    uint interval = 60;
+    uint interval = 600;
     address owner;
     address[] prosumerAddress;
     Storage[] storages;
@@ -19,7 +19,7 @@ contract Home {
 
     function useCapaInNextIntervalForXY(uint _x, uint _y, uint _value) public {
         uint index = 0;
-        uint shortest = 0;
+        uint shortest = uint(int(-1));
         uint valueLeft = _value;
         uint j = 0;
         while(j < storages.length && valueLeft > 0){
