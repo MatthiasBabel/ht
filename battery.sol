@@ -1,15 +1,45 @@
 pragma solidity ^0.4.24;
 
 contract Home {
-    uint interval = 600;
+    uint interval = 10;
     address owner;
     address[] prosumerAddress;
-    Storage[] storages;
+    Storage[] public storages;
     mapping(address => Prosumer) prosumer;
-    mapping(uint => mapping(uint => Storage)) storageGrid;
+    mapping(uint => mapping(uint => Storage)) public storageGrid;
+    TokenBase tokenBase;
+    uint tokenForOneCapacity = 1;
+    uint pauschale = 10;
 
     constructor() public {
         owner = msg.sender;
+        tokenBase = new TokenBase();
+    }
+
+    function getNbrOfClaims() public view returns(uint){
+         return prosumer[msg.sender].getStorages()[0].getNbrOfClaims();
+    }
+
+    function getPauschale() public view returns(uint){
+        return pauschale;
+    }
+
+    function setPauschale(uint _value) public {
+        pauschale = _value;
+    }
+
+    function getTokenForOneCapacity() public view returns (uint){
+        return tokenForOneCapacity;
+    }
+
+    function balanceOf(address _owner) public view returns (uint256 balance) {
+        return tokenBase.balanceOf(_owner);
+    }
+
+    function claim(uint _stNbr) public {
+        require(prosumer[msg.sender].getStorages().length > 0);
+        prosumer[msg.sender].getStorages()[_stNbr].setLastClaimedToNow();
+        tokenBase.giveTokenFromTo(msg.sender, prosumer[msg.sender].getStorages()[_stNbr].claim());
     }
 
     //setter
@@ -17,14 +47,38 @@ contract Home {
         return storageGrid[_x][_y].useCapaInNextInterval(_value);
     }
 
-    function useCapaInNextIntervalForXY(uint _x, uint _y, uint _value) public {
+    function getMaxCapa() public view returns(uint maxCapa) {
+        for(uint i = 0; i < storages.length; i++){
+            maxCapa += storages[i].getCapa();
+        }
+    }
+
+    function changeCapa(uint _stNbr, uint _capa) public {
+        prosumer[msg.sender].getStorages()[_stNbr].changeCapa(_capa);
+    }
+
+    function getMyStorages() public view returns(Storage[]) {
+        return prosumer[msg.sender].getStorages();
+    }
+
+    function getInterval() public view returns(uint){
+        return interval;
+    }
+
+    function setMyStorageOffline(uint _stNbr) public {
+        prosumer[msg.sender].getStorages()[_stNbr].setOffline();
+    }
+
+    function setMyStorageOnline(uint _stNbr) public {
+        prosumer[msg.sender].getStorages()[_stNbr].setOnline();
+    }
+
+    function useCapaInNextIntervalForXY(uint _x, uint _y, uint _value) public returns(uint valueLeft){
         uint index = 0;
         uint shortest = uint(int(-1));
-        uint valueLeft = _value;
-        uint j = 0;
-        while(j < storages.length && valueLeft > 0){
-        //Suchen der kürzesten Distanz
-            for(uint i = 0; i < storages.length; i++){
+        valueLeft = _value;
+        for(uint i = 0; i < storages.length; i++){
+            if(storages[i].getUnusedCapaInNextInterval() > 0){
                 uint x = 0;
                 uint y = 0;
                 uint len = 0;
@@ -43,15 +97,18 @@ contract Home {
                     index = i;
                 }
             }
-            uint space = storages[index].getUnusedCapaInNextInterval();
-            if(space >= valueLeft)
-                storages[index].useCapaInNextInterval(valueLeft);
-            else {
-                storages[index].useCapaInNextInterval(space);
-                valueLeft -= space;
-            }
-            j++;
         }
+        uint space = storages[index].getUnusedCapaInNextInterval();
+        if(space >= valueLeft){
+            storages[index].useCapaInNextInterval(valueLeft);
+            valueLeft = 0;
+        }
+        else {
+            storages[index].useCapaInNextInterval(space);
+            valueLeft -= space;
+            useCapaInNextIntervalForXY(_x, _y, valueLeft);
+        }
+
     }
 
     //New
@@ -107,6 +164,10 @@ contract Prosumer {
         storages.push(Storage(_storage));
     }
 
+    function getStorages() public view returns (Storage[]){
+        return storages;
+    }
+
 }
 
 contract Storage {
@@ -117,7 +178,6 @@ contract Storage {
     uint maxCapa;
     uint capa;
     mapping(uint => uint) usedCapaInInterval;
-    mapping(uint => bool) claimedInInterval;
     uint lastClaimed;
 
     struct Coordinates{
@@ -148,6 +208,7 @@ contract Storage {
 
     function changeCapa(uint _capa) public{
         capa = _capa;
+        maxCapa = _capa;
     }
 
     function changeXY(uint _x, uint _y) public{
@@ -174,14 +235,114 @@ contract Storage {
         return capa - usedCapaInInterval[home.getNextInterval()];
     }
 
-    function claim() public returns(uint _value){
-        lastClaimed = now;
+    function setLastClaimedToNow() public{
+        lastClaimed = home.getInterval();
     }
 
-    function isClaimedInInterval(uint _interval) public view returns(bool){
-        return claimedInInterval[_interval];
+    function getNbrOfClaims() public view returns(uint value) {
+        value = (now - lastClaimed) / home.getInterval();
     }
 
+    function claim() public view returns(uint value){
+        uint interval = home.getInterval();
+        uint notClaimedIntervals = (now - lastClaimed) / interval;
+        value = home.getPauschale();
+        for(uint i = 0; i < lastClaimed; i++) {
+            value += usedCapaInInterval[lastClaimed + notClaimedIntervals * interval] * home.getTokenForOneCapacity();
+        }
+
+    }
+}
+
+contract ERC20Interface {
+
+    uint256 public totalSupply;
+
+    function balanceOf(address _owner) public view returns (uint256 balance);
+
+    function transfer(address _to, uint256 _value) public returns (bool success);
+
+    function transferFrom(address _from, address _to, uint256 _value) public returns (bool success);
+
+    function approve(address _spender, uint256 _value) public returns (bool success);
+
+    function allowance(address _owner, address _spender) public view returns (uint256 remaining);
+
+    event Transfer(address indexed _from, address indexed _to, uint256 _value);
+
+    event Approval(address indexed _owner, address indexed _spender, uint256 _value);
+
+}
 
 
+contract TokenBase is ERC20Interface {
+
+    string public constant NAME = "BatterChain";
+
+    string public constant SYMBOL = "BAC";
+
+    uint256 public constant INITIAL_AMOUNT = 100000;
+
+    address public owner;
+
+    mapping (address => uint256) public balances;
+
+    mapping (address => mapping (address => uint256)) allowed;
+
+    constructor() public {
+        totalSupply = INITIAL_AMOUNT;
+        balances[msg.sender] = INITIAL_AMOUNT;
+        owner = msg.sender;
+    }
+
+    function balanceOf(address _owner) public view returns (uint256 balance) {
+        return balances[_owner];
+    }
+
+    function giveTokenFromTo(address _to, uint _value) public{
+        require(msg.sender == owner, "No permission!");
+        balances[owner] -= _value;
+        balances[_to] += _value;
+    }
+
+    function transfer(address _to, uint256 _value) public returns (bool success) {
+
+        require(balances[msg.sender] >= _value, "Sender has not enought Token");
+
+        balances[msg.sender] -= _value;
+        balances[_to] += _value;
+
+        emit Transfer(msg.sender, _to, _value);
+        return true;
+    }
+
+    function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
+        uint256 allowance = allowed[_from][_to];
+        require(balances[_from] >= _value, "Sender has not enought Token");
+        require(allowance >= _value, "There is no allowance for this value");
+
+        balances[_to] += _value;
+        balances[_from] -= _value;
+        allowed[_from][_to] -= _value;
+
+        emit Transfer(_from, _to, _value);
+        return true;
+    }
+
+    function approve(address _spender, uint256 _value) public returns (bool success) {
+        allowed[msg.sender][_spender] = _value;
+
+        emit Approval(msg.sender, _spender, _value);
+        return true;
+    }
+
+    function allowance(address _owner, address _spender) public view returns (uint256 remaining) {
+        return allowed[_owner][_spender];
+    }
+
+    function addToken(uint _value) public {
+        require(owner == msg.sender, "No Access!");
+        totalSupply +=  _value;
+        balances[owner] += _value;
+    }
 }
