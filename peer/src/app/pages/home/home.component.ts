@@ -17,11 +17,7 @@ export class HomeComponent implements OnInit {
   ) { }
 
   ngOnInit() {
-    this.web3Service.getAccounts().subscribe(accs => {
-      this.account = accs[0];
-    });
 
-    this.contractService.test("hallo");
 
   }
 

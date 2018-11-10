@@ -21,7 +21,7 @@ var getContract = function() {
     return new Promise((resolve, reject) => {
       resolve(
         fs.readFileSync(
-          __dirname + "/build/contracts/TallySheet.json"
+          __dirname + "/build/contracts/Home.json"
         )
       );
     });

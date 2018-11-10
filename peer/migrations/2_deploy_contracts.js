@@ -1,4 +1,4 @@
-var TallySheet = artifacts.require("./TallySheet.sol");
+var TallySheet = artifacts.require("Home");
 
 module.exports = function(deployer) {
 	deployer.deploy(TallySheet);

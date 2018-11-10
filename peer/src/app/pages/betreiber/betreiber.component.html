@@ -1,3 +1,23 @@
-<p>
-  betreiber works!
-</p>
+
+
+
+  <div class="container">
+    <h1>Netzbetreiber (Nils)</h1>
+    <h2>{{acc}}</h2>
+    <h2 class="balance"> Aktuelle Kapazität: {{maxCapa}} </h2>
+    <div class="row">
+      <mat-card>
+        <mat-form-field>
+      <input matInput [(ngModel)]="kapaAnforderung" placeholder="Kapazitätsanforderung">
+      </mat-form-field>
+      <button mat-raised-button (click)="useCapa(1, 1)">Bestätigen</button>
+      <mat-progress-bar fim-style-primary
+          class="example-margin"
+          [color]="color"
+          [mode]="mode"
+          [value]="value"
+          [bufferValue]="bufferValue">
+      </mat-progress-bar>
+      </mat-card>
+      </div>
+      </div>

@@ -21,6 +21,14 @@ h1 {
     font-family: Arial, Helvetica, sans-serif;
   }
 
+  span{
+    font-size: 200%;
+    position: absolute;
+    top: 30px;
+    font-weight: light;
+  }
+
+
   .container {
   display: flex;
   flex-direction: column;
@@ -45,4 +53,13 @@ h1 {
   width: 100%;
   padding: 0px;
   margin: 0px;
+  height: 80px;
+  background-color: #098e0d
+}
+
+img{
+  height: 100px;
+  position: absolute;
+  right: -5px;
+  top: -10px;
 }
