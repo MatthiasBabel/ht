@@ -24,6 +24,12 @@ contract Home {
         return pauschale;
     }
 
+    function getUnusedCapaInNextInterval() public view returns(uint value){
+        for(uint i = 0; i < storages.length; i++){
+            value += storages[i].getUnusedCapaInNextInterval();
+        }
+    }
+
     function setPauschale(uint _value) public {
         pauschale = _value;
     }
@@ -36,10 +42,12 @@ contract Home {
         return tokenBase.balanceOf(_owner);
     }
 
-    function claim(uint _stNbr) public {
+    function claim() public {
         require(prosumer[msg.sender].getStorages().length > 0);
-        prosumer[msg.sender].getStorages()[_stNbr].setLastClaimedToNow();
-        tokenBase.giveTokenFromTo(msg.sender, prosumer[msg.sender].getStorages()[_stNbr].claim());
+        for(uint i = 0; i <  prosumer[msg.sender].getStorages().length; i++){
+            tokenBase.giveTokenFromTo(msg.sender, prosumer[msg.sender].getStorages()[i].claim());
+            prosumer[msg.sender].getStorages()[i].setLastClaimedToNow();
+        }
     }
 
     //setter
@@ -236,7 +244,7 @@ contract Storage {
     }
 
     function setLastClaimedToNow() public{
-        lastClaimed = home.getInterval();
+        lastClaimed = home.getActualInterval();
     }
 
     function getNbrOfClaims() public view returns(uint value) {
@@ -246,9 +254,9 @@ contract Storage {
     function claim() public view returns(uint value){
         uint interval = home.getInterval();
         uint notClaimedIntervals = (now - lastClaimed) / interval;
-        value = home.getPauschale();
-        for(uint i = 0; i < lastClaimed; i++) {
+        for(uint i = 0; i < notClaimedIntervals; i++) {
             value += usedCapaInInterval[lastClaimed + notClaimedIntervals * interval] * home.getTokenForOneCapacity();
+            value += home.getPauschale();
         }
 
     }
